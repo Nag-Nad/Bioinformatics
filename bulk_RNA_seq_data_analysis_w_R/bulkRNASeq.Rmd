@@ -135,7 +135,6 @@ This count matrix serves as the input for downstream analyses such as **normaliz
 
 ```{r}
 # Set the working directory to access the data
-setwd('/Users/systems/Desktop/Bioinformatics Course/bulk_RNA_seq')
 
 ge_matrix = read.table("NCOMMS-19-7936188_bulk_RNAseq_raw_counts.txt.gz", header = TRUE)
 
@@ -166,8 +165,6 @@ This metadata is essential for downstream analyses, such as **differential expre
 
 ```{r}
 path <- "NCOMMS-19-7936188_bulk_RNAseq_metadata.txt.gz"
-
-setwd('/Users/systems/Desktop/Bioinformatics Course/bulk_RNA_seq')
 
 pheno_matrix <- read.table(path, header = TRUE, stringsAsFactors = TRUE)
 
