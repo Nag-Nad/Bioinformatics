@@ -43,7 +43,8 @@ This folder has my analysis of a health dataset. I looked at patient features li
 - health_analysis.Rmd – R Markdown with full analysis and plots
 - health_analysis.html – a format to easily scroll the results and plots
 
-[🔗 View the full report (HTML)](https://nag-nad.github.io/Bioinformatics/health-risk-analysis-R/health_analysis.html)
+[View the full report (HTML)](https://nag-nad.github.io/Bioinformatics/health-risk-analysis-R/health_analysis.html)
+
 
 - healthcare-dataset-stroke-data.csv – original dataset (if allowed)
   
