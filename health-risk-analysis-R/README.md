@@ -40,6 +40,7 @@ This folder has my analysis of a health dataset. I looked at patient features li
 
 **Files**
 - health_analysis.Rmd – R Markdown with full analysis and plots
+- health_analysis.html – a format to easily scroll the results and plots
 - healthcare-dataset-stroke-data.csv – original dataset (if allowed)
   
 **Packages used**
