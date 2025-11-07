@@ -1,0 +1,1051 @@
+---
+title: "Stroke Risk Analysis: Statistical Exploration and Predictive Modeling"
+subtitle: "Examining Demographic, Lifestyle, and Clinical Factors"
+author: "Naghmeh"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)    # if you used pipes or mutate
+library(tidyr)    # if you reshaped data
+library(pheatmap)
+library(factoextra)
+library(car)
+library(dunn.test)
+library(rcompanion)
+```
+
+# Stroke Risk Analysis: Statistical Exploration and Predictive Modeling
+
+## Dataset overview
+
+The stroke dataset contains **5110 patient records** with **12 columns (features)**. It provides demographic, medical, and lifestyle information to analyze factors associated with stroke occurrence.
+
+**Features:**
+
+| Column | Description |
+|----------------------------|--------------------------------------------|
+| id | Unique patient identifier |
+| gender | "Male", "Female", or "Other" |
+| age | Age of the patient (numeric) |
+| hypertension | 0 = no, 1 = yes |
+| heart_disease | 0 = no, 1 = yes |
+| ever_married | "No" or "Yes" |
+| work_type | "children", "Govt_job", "Never_worked", "Private", "Self-employed" |
+| Residence_type | "Rural" or "Urban" |
+| avg_glucose_level | Average blood glucose level (numeric) |
+| bmi | Body Mass Index (numeric, contains some missing values) |
+| smoking_status | "formerly smoked", "never smoked", "smokes", or "Unknown" |
+| stroke | 0 = no stroke, 1 = stroke (target variable) |
+
+**Notes:** - `"Unknown"` in `smoking_status` represents missing information.
+
+## Setup
+
+### Libraries
+
+```{r}
+#install.packages("tidyverse")
+#install.packages('ggplot2')
+#install.packages('factoextra')
+#install.packages('pheatmap')
+```
+
+### Load the data and initial inspection
+
+```{r}
+setwd('/Users/systems/Desktop/Bioinformatics Course/GitHub')
+ds1 = read.csv('healthcare-dataset-stroke-data.csv', sep = ",",)
+dim(ds1)
+head(ds1)
+
+```
+
+## Data Cleaning & Quality Control
+
+### Conversions and data types
+
+```{r}
+# Convert N/A to NA in the dataset
+for (i in 1:ncol(ds1)) {
+  (ds1[[i]][ds1[[i]] == 'N/A'] <- NA) | (ds1[[i]][ds1[[i]] == 'Unknown'] <- NA)
+  
+}
+
+```
+
+```{r}
+# Convert relevant columns to numeric
+ds1$age <- as.numeric(ds1$age)
+ds1$avg_glucose_level <- as.numeric(ds1$avg_glucose_level)
+ds1$bmi <- as.numeric(ds1$bmi)
+```
+
+### Handling missing values
+
+```{r}
+
+# find NaN values in datast
+for (i in 1:ncol(ds1)) {
+  if (any(is.na(ds1[,i]))) {
+    cat('There are ', sum(is.na(ds1[,i])), 'NaN in column ', colnames(ds1)[i], '\n')
+  } else {
+    cat('There are no NaNs in column ', colnames(ds1)[i], '\n')
+  }
+}
+
+```
+
+```{r}
+# drop NaN values
+ds1 <- ds1[complete.cases(ds1),]
+dim(ds1)
+```
+
+### Summary statistics
+
+```{r}
+summary(ds1)
+```
+
+```{r}
+# Make a table for dataste summary
+data.frame(unclass(summary(ds1)), check.names = FALSE, stringsAsFactors = FALSE)
+
+```
+
+## Exploratory Data Analysis (EDA)
+
+### Bivariate analysis
+
+```{r}
+# plot a line
+ggplot(ds1, aes(x = age, y = bmi)) + 
+  geom_point() +
+  # add a linear fit
+  geom_smooth(formula = y ~ x, method= 'loess', se= TRUE) +
+  # add title and change axis labels
+  ggtitle('BMI vs. Age') +
+  xlab('Age') + 
+  ylab('BMI')
+```
+
+A scatter plot of **BMI (Y-axis)** versus **Age (X-axis)** was created to examine the relationship between these two variables.
+
+**Observations:**
+
+-   The trend line is almost flat, suggesting **no strong relationship** between BMI and age.
+
+-   There is a very slight curve, indicating a **minimal nonlinear effect**, but it is negligible.
+
+```{r}
+options(repr.plot.width = 4.5, repr.plot.height = 3)
+
+ggplot(ds1, aes(x = bmi, y = avg_glucose_level)) +
+  geom_point(na.rm = TRUE) +
+  ggtitle("BMI vs Average Glucoe Level") +
+  xlab("BMI") + 
+  ylab("Average Glucoe Level")
+
+
+```
+
+A scatter plot of **Average Glucose Level (Y-axis)** versus **BMI (X-axis)** was created to explore their relationship.
+
+**Observations:**
+
+-   There is **no clear linear relationship** between average glucose level and BMI.
+
+-   Two clusters are noticeable in average glucose levels:
+
+    1.  Points scattered around \~100, which is mostly dense
+
+    2.  Points scattered around \~200, less dense
+
+-   Within these clusters, BMI mostly ranges between **20 and 50**.
+
+```{r}
+Numerical.idx <- grep('age|bmi|avg_glucose_level',colnames(ds1))
+
+ds1.onlyNumerical <- ds1[,Numerical.idx]
+ds1.onlyNumerical [1:10, ]
+```
+
+```{r}
+corr.ds1.onlyNumerical <- round(cor(ds1.onlyNumerical), 2)
+
+
+pheatmap(corr.ds1.onlyNumerical,
+         display_numbers = TRUE,
+         color = colorRampPalette(c("steelblue", "white", "red"))(10),
+         show_rownames = TRUE, 
+         show_colnames = TRUE)
+```
+
+A heatmap of numerical features (**Age, BMI, Average Glucose Level**) was created to examine correlations and relationships between variables.
+
+**Observations:**
+
+Correlations between numerical features are relatively weak:\
+**BMI vs Average Glucose Level:** 0.16\
+**BMI vs Age:** 0.08\
+**Age vs Average Glucose Level:** 0.23
+
+The heatmap also shows a **hierarchical clustering tree**, which connects variables based on similarity:\
+**Average Glucose Level** is first connected to **Age**, and then this branch connects to **BMI**, reflecting their relative correlation strengths.
+
+### Univariate analysis
+
+```{r}
+ggplot(ds1, aes(x = age)) +
+  geom_histogram(binwidth = 5, fill = "skyblue", color = "black") +
+  xlab('Age') +
+  ylab('# of patients')
+
+
+ggplot(ds1, aes(x = bmi)) +
+  geom_histogram(binwidth = 5, fill = "lightgreen", color = "black") +
+  xlab('BMI') +
+  ylab('# of patients')
+
+ggplot(ds1, aes(x = avg_glucose_level)) +
+  geom_histogram(binwidth = 5, fill = "salmon", color = "black") +
+  xlab('Average Glucosse Level') +
+  ylab('# of patients')
+
+```
+
+**Age distribution**
+
+**Observations:**
+
+-   Age ranges approximately from **15 to 80 years**.
+
+-   The highest concentration of patients is between **40 and 60 years old**, indicating a middle-aged majority in the dataset.
+
+**BMI distribution**
+
+**Observations:**
+
+-   BMI ranges approximately from **20 to 53**.
+
+-   Most patients have a BMI between **25 and 35**, with the peak slightly **towards the left side** of the plot.
+
+**Average glucose level distribution**
+
+**Observations:**
+
+-   The histogram shows a **bimodal distribution**, indicating **two distinct clusters** of patients.
+
+    1.  **First cluster**: Mid-value around **100**, number of patients up to \~300 (largest group).
+
+    2.  **Second cluster**: Mid-value around **200**, number of patients up to \~50 (smaller group).
+
+```{r}
+
+ds1_long <- ds1 %>%
+  select(bmi, age, avg_glucose_level) %>%  # select the numerical columns
+  pivot_longer(everything(), names_to = "variable", values_to = "value") 
+
+# Create boxplot
+ggplot(ds1_long, aes(x = variable, y = value, fill = variable)) +
+  geom_boxplot() +
+  ylab("Value") +
+  xlab("Variable") +
+  ggtitle("Comparison of Numerical Variables") +
+  theme_minimal()
+
+```
+
+I compared the distributions of three key numerical variables: **Age**, **Average Glucose Level**, and **BMI**.
+
+-   **Age:** The distribution ranges from 0 to \~80, with no extreme outliers observed. The data is relatively compact and symmetric around the median.
+
+-   **Average Glucose Level:** The median is around 80, with most values between \~60 and 110. However, there are many extreme outliers above 180, going up to 300.
+
+-   **BMI:** The interquartile range is very small, roughly 10 to 20. There are several outliers between 50–90, representing unusually high BMI values compared to the bulk of the data.
+
+**Interpretation:**\
+The boxplots highlight that while Age is relatively clean, BMI and Average Glucose Level contain notable outliers. These extreme values may affect correlation, regression, or other statistical analyses.
+
+```{r}
+
+categorical_vars <- c("stroke", "hypertension", "gender", "smoking_status")
+
+for (var in categorical_vars) {
+  p <- ggplot(ds1, aes_string(x = var, fill = 'gender')) +
+    geom_bar()
+       ggtitle(paste("Count of", var)) +
+       xlab(var) +
+       ylab("Count") +
+       theme_minimal()
+  print(p)
+}
+
+
+```
+
+### Principal Component Analysis (PCA)
+
+```         
+prcomp(x, retx = TRUE, center = TRUE, scale. = FALSE,
+       tol = NULL, rank. = NULL, ...)
+```
+
+```{r}
+pca <- prcomp(ds1.onlyNumerical, scale = TRUE, center = TRUE)
+summary(pca)
+```
+
+A PCA was performed on the numerical features to understand the main sources of variation in the dataset.
+
+| Component | Standard Deviation | Proportion of Variance | Cumulative Proportion |
+|------------------|------------------|------------------|------------------|
+| PC1       | 1.1497             | 0.4406                 | 0.4406                |
+| PC2       | 0.9630             | 0.3091                 | 0.7497                |
+| PC3       | 0.8666             | 0.2503                 | 1.0000                |
+
+**Interpretation:**
+
+-   **PC1** captures the largest variation in the data (\~44%).\
+-   **PC2** captures the next largest portion (\~31%), bringing the cumulative variance explained by the first two components to \~75%.\
+-   **PC3** captures the remaining \~25%, with all three components together explaining 100% of the variance.
+
+**Conclusion:**
+
+-   Most of the variability in the dataset can be summarized by **PC1 and PC2**.
+
+-   These components could be used for **visualization or dimensionality reduction** while retaining the majority of the information in the dataset.
+
+```{r}
+# Visualise PCA
+
+# visualise eigenvalues
+options(repr.plot.width = 5, repr.plot.height = 5)
+
+plot(pca,
+     xlab= 'Dimensions',
+     main = 'Scree plot')
+
+# Cumulative explained variability plot
+# cumsum(x) --> Returns a vector whose elements are the cumulative sums, products, minima or maxima of the elements of the argument.
+cp <-  cumsum(pca$sdev^2 / sum(pca$sdev^2))
+plot(cp,
+     xlab = 'PC #',
+    ylab = 'Amount of explained variance',
+    main = 'Cumulative variance plot')
+
+# visualise individual patients using only the first 2 componants
+plot(pca$x[,1], pca$x[,2],
+     xlab = 'PC 1',
+     ylab = 'PC 2',
+     main = 'PCA across patients')
+```
+
+-   **Scree plot (eigenvalues plot):**
+
+    -   This plot shows the **variance captured by each principal component**. The first component (PC1) has the highest eigenvalue, indicating it explains the most variance.
+
+    -   The first two PCs are the **most informative** for reducing dimensionality or plotting.
+
+-   **Cumulative variance plot:**
+
+    -   This plot shows the **cumulative proportion of variance explained** as more PCs are included.
+
+    -   In this case, the first **two components** capture \~75% of the total variance, confirming that a **low-dimensional representation** effectively summarizes the dataset.
+
+-   **PC1 vs. PC2 scatter plot:**
+
+    -   The scatter plot of individuals along **PC1 and PC2** shows how patients are distributed in the space defined by the first two principal components.
+
+        **Observations:**
+
+        Most individuals form a **dense central cluster** roughly in the range **PC1 ≈ -2 to -1** and **PC2 ≈ -2 to 2**.\
+        This tail (left side) suggests a subset of individuals whose profiles differ from the majority along PC1.
+
+        **Outliers:** - Three prominent outliers are observed:\
+
+        -   PC1 ≈ -4, PC2 ≈ 4.5\
+        -   PC1 ≈ -3, PC2 ≈ 7\
+        -   PC1 ≈ -2, PC2 ≈ 6\
+        -   These points represent individuals with **extreme values in one or more features** (likely high BMI or high average glucose levels).
+
+        **Interpretation:**
+
+    -   **PC1** captures the majority of variance, so individuals at the extremes along PC1 have profiles that differ most from the general population.
+
+    -   **PC2** captures secondary variation, spreading points vertically and highlighting subtler differences among individuals.
+
+```{r}
+options(repr.plot.width = 10, repr.plot.height = 10)
+fviz_pca_var(pca, geom = c('point', 'text'))
+
+fviz_pca_biplot(pca, geom = c('point', 'text'))
+```
+
+**PCA Variable and Individual Plots**
+
+A PCA biplot was created to visualize **both variable loadings and individual patients** in the space defined by the first two principal components.
+
+**Variable (Loading) Plot Observations**
+
+-   **Explained variance:** PC1 accounts for \~44.1% of the variance, and PC2 accounts for \~30.9%.
+    -   **Average Glucose Level** and **Age** point roughly in the same quadrant, indicating a **positive correlation**.\
+    -   **BMI** is in a different quadrant but lies in the same **hemisphere** (left), suggesting a weaker positive relationship with the other two variables compared to the correlation between Age and Glucose.\
+-   **Angles between loadings** indicate correlations between variables:
+    -   Age and BMI: \~80° → weak correlation\
+    -   Age and Glucose: \~30–45° → moderate positive correlation\
+    -   BMI and Glucose: \~60° → weak-to-moderate positive correlation\
+-   The **similar length of the arrows** indicates that all three variables contribute similarly to the variance captured by the first two PCs.
+
+**Individual (Scores) Plot Observations**
+
+-   Each point represents a patient, with some points annotated by their IDs.\
+-   Most points are clustered near the origin, but several **outliers** are evident:
+    -   IDs **929, 4210, 545**: moderately distant from the cluster along PC2.\
+    -   ID **2188**: an extreme outlier at **PC1 ≈ 2.5, PC2 ≈ -2**, located far from the main cluster, suggesting an individual with an **unusual combination of Age, BMI, and Glucose**.
+
+**Interpretation**
+
+-   The **relative positions of variable loadings** reflect correlations: variables pointing in the same direction are positively correlated, and angles approaching 90° indicate weak correlations.\
+-   Individuals far from the origin or cluster correspond to **extreme profiles**, potentially high BMI, age, or glucose levels.\
+-   PC1 and PC2 capture the majority of variance in the data, allowing the visualization to identify **both variable relationships and unusual patient profiles simultaneously**.
+
+### Hierarchical Clustering
+
+```         
+hclust(d, method = "complete", members = NULL)
+
+## S3 method for class 'hclust'
+plot(x, labels = NULL, hang = 0.1, check = TRUE,
+     axes = TRUE, frame.plot = FALSE, ann = TRUE,
+     main = "Cluster Dendrogram",
+     sub = NULL, xlab = NULL, ylab = "Height", ...)
+```
+
+```{r}
+# distance matrix between all samples
+# I scaled all numerical variables (scale = TRUE) so that each variable has mean 0 and standard deviation 1 — this ensures variables on different scales are comparable
+ds1.onlyNumerical.sc <-  scale(ds1.onlyNumerical, scale = TRUE, center = TRUE)
+
+#You computed a distance matrix between variables
+# Transposing (t()) is important because dist() by default calculates distance between rows, but you wanted distance between columns (variables)
+dist.by.variable <-  dist(t(ds1.onlyNumerical.sc)) # distance between columns
+
+# Hierarchical clustering (hclust)
+dt.clust.by.var <-  hclust(dist.by.variable)
+
+# hierarchical clustering with hclust, which organizes variables into a tree (dendrogram) based on similarity.
+options(repr.plot.width = 5, repr.plot.height = 5)
+plot(dt.clust.by.var)
+
+```
+
+A **hierarchical cluster dendrogram** was generated using the numerical variables (**BMI, Age, Average Glucose Level**) to visualize similarities among features.
+
+**Observations:**
+
+**BMI** is first connected to **Age**, forming a branch, and this branch then connects to **Average Glucose Level**.\
+**Age and Average Glucose Level** are more closely linked to each other than either is to BMI, as indicated by their shorter branch distance.
+
+The **dendrogram complements PCA** by providing a different perspective on variable relationships: In PCA, **Age and Average Glucose Level** were in the same quadrant and had a **moderate positive correlation**, consistent with the dendrogram showing them as closely linked.\
+**BMI** was in a different quadrant but in the same hemisphere, reflecting a **weaker association** with the other two variables, which is also captured in the dendrogram by the longer branch connecting BMI to the Age-Glucose cluster.\
+Both methods highlight the **same underlying structure**: Age and Glucose are closely related, while BMI is less strongly associated, providing convergent evidence of variable relationships.
+
+## Correlation analysis
+
+### covariance
+
+Shows if there is any relationship between two variables (e.g., higher value of one and higher value of the other) but it is hard to interpret because it is dependant on the scale.
+
+```{r}
+
+# cov(x, y = NULL, use = "everything", method = c("pearson", "kendall", "spearman"))
+bmi_glucose_cov_func <-  cov(ds1$bmi, ds1$avg_glucose_level)
+round(bmi_glucose_cov_func, 2)
+```
+
+The covariance between BMI and average glucose level was calculated as **54.44**, indicating that, on average, as BMI increases, glucose tends to increase as well. However, covariance is scale-dependent, so it is difficult to interpret its strength directly.
+
+```         
+cor.test(x, y,
+         alternative = c("two.sided", "less", "greater"),
+         method = c("pearson", "kendall", "spearman"),
+         exact = NULL, conf.level = 0.95, continuity = FALSE, ...)
+```
+
+### Assumptions for pearsson correlation
+
+#### Guassian/Normal distribution for each variable
+
+Null hypothesis = the distribution is Guassian
+
+```{r}
+# shapiro-wilk normality test
+shapiro.test(ds1$bmi)
+shapiro.test(ds1$avg_glucose_level)
+```
+
+We tested whether each variable follows a **Gaussian (normal) distribution** using the **Shapiro–Wilk test**:
+
+-   **Null hypothesis (H₀):** the variable is normally distributed.
+
+-   **Alternative hypothesis (H₁):** the variable is not normally distributed.
+
+Both Shapiro-Wilk tests show **p-values \< 2.2e-16**, which is far below 0.05. This means we **reject the null hypothesis of normality** for both BMI and average glucose level.
+
+Since neither variable is normally distributed, using **Pearson correlation is not strictly appropriate**. A more robust choice is the **Spearman rank correlation**, which does not assume normality and measures monotonic relationships rather than strictly linear ones.
+
+> Non-parametric correlations are appropriate when variables deviate from Gaussian distribution, allowing meaningful relationship assessment without assuming normality.
+
+### non-parametric correlation
+
+```{r}
+cor.test(ds1$bmi, ds1$avg_glucose_leve, method= 'spearman')
+```
+
+The **Spearman rank correlation** between BMI and average glucose level is **ρ ≈ 0.109**, indicating a **very weak positive monotonic relationship**.
+
+The correlation is statistically significant (p ≈ 1.77e-10), meaning that even though the relationship is weak, it is **unlikely to have occurred by chance**.
+
+Compared to the Pearson correlation (r ≈ 0.156), Spearman gives a slightly lower estimate, reflecting the **non-normal distribution** of the variables.
+
+In context, this confirms my earlier observations from scatter plots and PCA: **BMI and average glucose increase slightly together**, but the association is weak.
+
+## Predictive Modeling
+
+### Logistic regression
+
+#### model fitting
+
+I fitted a **logistic regression model** to examine the effect of several predictors on stroke occurrence:
+
+```{r}
+stroke_model2 <- glm(stroke ~ bmi + age + avg_glucose_level + hypertension, 
+                     data = ds1, family = binomial)
+summary(stroke_model2)
+
+```
+
+-   **Response variable:** `stroke` (0 = no stroke, 1 = stroke)
+
+-   **Predictors:**
+
+    -   `bmi` (Body Mass Index)
+
+    -   `age` (Patient age)
+
+    -   `avg_glucose_level` (Average blood glucose)
+
+    -   `hypertension` (0 = no, 1 = yes)
+
+-   **Age, average glucose, and hypertension** are significant predictors of stroke.
+
+-   **BMI does not have a significant effect** in this dataset after adjusting for other variables.
+
+-   This aligns with earlier EDA: BMI showed weak correlations with other features and stroke.
+
+#### Visualizing predicted probabilities
+
+```{r}
+# Load required library
+library(ggplot2)
+
+# Create a new dataset to predict probabilities
+# We'll vary one predictor at a time, keeping others constant
+newdata <- data.frame(
+  bmi = mean(ds1$bmi, na.rm = TRUE),
+  age = seq(min(ds1$age, na.rm = TRUE), max(ds1$age, na.rm = TRUE), length.out = 100),
+  avg_glucose_level = mean(ds1$avg_glucose_level, na.rm = TRUE),
+  hypertension = 0  # assume no hypertension first
+)
+
+# Predict probabilities
+newdata$stroke_prob <- predict(stroke_model2, newdata, type = "response")
+
+# Plot stroke probability vs Age
+ggplot(newdata, aes(x = age, y = stroke_prob)) +
+  geom_line(color = "steelblue", size = 1.2) +
+  ggtitle("Predicted Stroke Probability by Age") +
+  xlab("Age") +
+  ylab("Probability of Stroke") +
+  theme_minimal()
+
+
+newdata_glucose <- data.frame(
+  bmi = mean(ds1$bmi, na.rm = TRUE),
+  age = mean(ds1$age, na.rm = TRUE),
+  avg_glucose_level = seq(min(ds1$avg_glucose_level, na.rm = TRUE), 
+                          max(ds1$avg_glucose_level, na.rm = TRUE), length.out = 100),
+  hypertension = 0
+)
+
+newdata_glucose$stroke_prob <- predict(stroke_model2, newdata_glucose, type = "response")
+
+ggplot(newdata_glucose, aes(x = avg_glucose_level, y = stroke_prob)) +
+  geom_line(color = "darkred", size = 1.2) +
+  ggtitle("Predicted Stroke Probability by Avg Glucose Level") +
+  xlab("Average Glucose Level") +
+  ylab("Probability of Stroke") +
+  theme_minimal()
+
+
+newdata_hyp <- data.frame(
+  bmi = mean(ds1$bmi, na.rm = TRUE),
+  age = mean(ds1$age, na.rm = TRUE),
+  avg_glucose_level = mean(ds1$avg_glucose_level, na.rm = TRUE),
+  hypertension = c(0,1)
+)
+
+newdata_hyp$stroke_prob <- predict(stroke_model2, newdata_hyp, type = "response")
+
+ggplot(newdata_hyp, aes(x = factor(hypertension), y = stroke_prob, fill = factor(hypertension))) +
+  geom_bar(stat = "identity") +
+  scale_fill_manual(values = c("0"="steelblue","1"="darkred"), labels = c("No", "Yes")) +
+  ggtitle("Predicted Stroke Probability by Hypertension") +
+  xlab("Hypertension") +
+  ylab("Probability of Stroke") +
+  theme_minimal()
+
+```
+
+The predicted stroke probabilities from the logistic regression model were visualized for each key predictor while holding other variables constant.
+
+**Age:**
+
+-   The stroke probability increases slowly for patients **under 40**, showing a plateau.
+
+-   After age 40, the probability rises more rapidly.
+
+-   From **60 to 80 years**, the probability increases from roughly **0.05 to over 0.15**, highlighting that **age is a strong risk factor for stroke**.
+
+-   The relationship is roughly **logarithmic**.
+
+**Average Glucose Level:**
+
+-   The predicted probability of stroke **increases with glucose**, in an approximately **linear trend** across the observed range.
+
+-   This indicates that **higher average glucose levels are associated with higher stroke risk**.
+
+**Hypertension:**
+
+-   Individuals with **hypertension (yes)** have roughly **twice the predicted probability of stroke** compared to those without hypertension.
+
+-   This aligns with the logistic regression coefficient, showing hypertension is a **strong categorical risk factor**.
+
+**Summary:**
+
+-   Age, average glucose, and hypertension all show **positive associations** with predicted stroke probability.
+
+-   Age shows the strongest non-linear effect, glucose shows a near-linear effect, and hypertension shows a large step increase for the binary category.
+
+-   These plots provide an intuitive visualization of how each predictor contributes to stroke risk.
+
+## Statistical testing
+
+### Normality & Homogeneity of Variance
+
+```{r}
+# Normality within each group
+shapiro.test(ds1$avg_glucose_level[ds1$stroke == 0])
+shapiro.test(ds1$avg_glucose_level[ds1$stroke == 1])
+
+```
+
+```{r}
+# Homogeneity of variances
+# Using car package
+# Does not assume normality
+#library(car)
+leveneTest(avg_glucose_level ~ factor(stroke), data = ds1)
+
+# Or base R alternative (less robust)
+# F test: assumes normlity
+var.test(avg_glucose_level ~ factor(stroke), data = ds1)
+
+```
+
+The distribution of **average glucose level** was examined separately for patients with (`stroke = 1`) and without (`stroke = 0`) stroke.
+
+**Normality check (Shapiro test):**
+
+-   `stroke = 0`: W = 0.805, p \< 2.2e-16 → rejects normality
+
+-   `stroke = 1`: W = 0.878, p = 6.13e-11 → rejects normality
+
+**Variance check:**
+
+-   **Levene’s test (centered at median):** F = 63.498, p = 2.17e-15 → variances are not equal
+
+-   **F-test for variance ratio:** ratio ≈ 0.534, p = 1.6e-10 → confirms unequal variances
+
+**Interpretation:**
+
+-   Both groups fail the normality assumption.
+
+-   Variances between groups are unequal.
+
+-   Therefore, **parametric t-test assumptions are violated**.
+
+**Non-parametric alternative:**
+
+-   **Mann–Whitney U test** (also called Wilcoxon rank-sum test) is appropriate because:
+
+    -   The two samples are independent
+
+    -   The dependent variable (average glucose) is continuous
+
+    -   No assumption of normality or equal variance is required
+
+    -   Shape and skewness of distributions are roughly similar
+
+```{r}
+unique(ds1$Residence_type
+       )
+```
+
+```{r}
+shapiro.test(ds1$bmi[ds1$Residence_type == "Urban"])
+shapiro.test(ds1$bmi[ds1$Residence_type == "Rural"])
+```
+
+Both groups fail the normality assumption. The p-values are extremely small (`< 2.2e-16`), meaning the BMI distributions in Urban and Rural residents are **not Gaussian**.
+
+For comparing BMI between these two groups, **a t-test is not appropriate**. Instead, you should use a **non-parametric test**, like the **Mann-Whitney U test (Wilcoxon rank-sum test)**.
+
+#### Mann–Whitney U
+
+```{r}
+ggplot(ds1, aes(x = bmi, fill = factor(Residence_type))) +
+  geom_density(alpha = 0.4)
+```
+
+```{r}
+wilcox.test(bmi ~ Residence_type, data = ds1)
+
+```
+
+The Wilcoxon rank-sum test shows a **p-value = 0.61**, which is very high.
+
+Interpretation:
+
+-   Null hypothesis (H₀): The BMI distributions are the same in Urban and Rural groups.
+
+-   Alternative hypothesis (H₁): The BMI distributions differ.
+
+Since **p ≫ 0.05**, we **fail to reject H₀**. In other words, there’s **no statistically significant difference in BMI** between Urban and Rural residents.
+
+Even though normality was violated, the non-parametric test confirms that the two groups are similar regarding BMI. Based on this test, **residence type (Urban vs Rural) does not appear to affect BMI.**
+
+```{r}
+
+# Check the skewness 
+ggplot(ds1, aes(x = avg_glucose_level, fill = factor(stroke))) +
+  geom_density(alpha = 0.4)
+
+
+```
+
+```{r}
+wilcox.test(avg_glucose_level ~ stroke, data = ds1)
+
+```
+
+```{r}
+tapply(ds1$avg_glucose_level, ds1$stroke, median, na.rm = TRUE)
+
+ggplot(ds1, aes(x = factor(stroke), y = avg_glucose_level, fill = factor(stroke))) +
+  geom_boxplot(alpha = 0.7) +
+  xlab("Stroke (0 = No, 1 = Yes)") +
+  ylab("Average Glucose Level") +
+  theme_minimal()
+
+```
+
+A **Wilcoxon rank-sum test** was performed to compare **average glucose levels** between patients with stroke (`stroke = 1`) and without stroke (`stroke = 0`).
+
+-   **Test statistic:** W = 219,157
+
+-   **p-value:** 1.605e-08
+
+**Interpretation:**
+
+-   The p-value is much smaller than 0.05, indicating a **statistically significant difference** in average glucose levels between the two groups.
+
+-   Patients who experienced a stroke tend to have **higher average glucose levels** than those who did not, consistent with the idea that elevated glucose is a risk factor.
+
+-   This non-parametric test is robust because **normality and equal variance assumptions were violated**.
+
+**Summary:**
+
+-   Average glucose differs significantly between stroke and non-stroke patients.
+
+-   Supports earlier findings from logistic regression and exploratory analysis that **glucose is positively associated with stroke risk**.
+
+#### ANOVA / Kruskal–Wallis
+
+We want to test whether the **means of a numerical variable differ across multiple groups**.
+
+-   **Null hypothesis (H₀):** All group means are equal
+
+-   **Alternative hypothesis (H₁):** At least two groups have different means
+
+**Assumption checks before running ANOVA:**
+
+1.  **Normality within each group:** `shapiro.test()`
+
+2.  **Homogeneity of variance across groups:** `leveneTest()`
+
+3.  **Independence:** Assumed by study design
+
+**Decision:**
+
+-   If **both normality and homogeneity assumptions hold**, a standard **one-way ANOVA** can be applied.
+
+-   If **assumptions are violated**, a **Kruskal–Wallis test** is recommended as a non-parametric alternative.
+
+    -   It does not assume normality or equal variances.
+
+    -   Tests whether the **distributions (medians) differ across groups** rather than strictly the means.
+
+```{r}
+unique(ds1$work_type)
+
+```
+
+```{r}
+
+for(group in unique(ds1$work_type)) {
+  cat("Work type:", group, "\n")
+  subset_values <- ds1$avg_glucose_level[ds1$work_type == group]
+  test_result <- shapiro.test(subset_values)
+  print(test_result)
+  cat("\n")
+}
+```
+
+-   Most work type groups **violate normality**, except “Never_worked” which seems roughly normal.
+
+-   Since ANOVA assumes normality in each group, **strictly speaking the assumption is not met**.
+
+-   Most work type groups **violate normality**, except “Never_worked” which seems roughly normal.
+
+-   Since ANOVA assumes normality in each group, **strictly speaking the assumption is not met**.
+
+```{r}
+# check equal variance
+leveneTest(avg_glucose_level ~ work_type, data = ds1)
+
+```
+
+The result is clear:
+
+-   **Null hypothesis (H₀):** All work type groups have equal variances.
+
+-   **p-value \< 2.2e-16 → very small**, so you **reject H₀**.
+
+**Interpretation:** The variance of average glucose level differs significantly across work types.
+
+**Implication for ANOVA:** Standard (parametric) ANOVA assumes equal variances. Since this assumption is violated, a standard ANOVA is **not ideal**.
+
+**I** Use a **non-parametric alternative** such as the **Kruskal-Wallis test**, which does not assume normality or equal variances.
+
+```{r}
+kruskal.test(avg_glucose_level ~ work_type, data = ds1)
+```
+
+-   A **Kruskal-Wallis test** was performed to compare **average glucose levels** across different `work_type` groups because most groups failed the normality assumption.
+
+    -   **Test statistic:** χ² = 4.8721
+
+    -   **Degrees of freedom:** 4
+
+    -   **p-value:** 0.3007
+
+    **Interpretation:**
+
+    -   The p-value is **greater than 0.05**, so we **fail to reject the null hypothesis**.
+
+    -   This indicates that there is **no statistically significant difference** in average glucose levels among the work type groups.
+
+    -   In other words, work type does not appear to influence average glucose levels in this dataset.
+
+```{r}
+
+unique(ds1$smoking_status)
+```
+
+```{r}
+for(group in unique(ds1$smoking_status)) {
+  cat("Smoking status:", group, "\n")
+  subset_values <- ds1$avg_glucose_level[ds1$smoking_status == group]
+  test_result <- shapiro.test(subset_values)
+  print(test_result)
+  cat("\n")
+}
+```
+
+-   All smoking groups **fail the normality test**, with p-values far below 0.05.
+
+-   This indicates that **parametric tests like ANOVA are not appropriate** for comparing the groups.
+
+-   A **non-parametric alternative**, such as the Kruskal-Wallis test, should be used to test for differences in the numerical variable across smoking status groups.
+
+```{r}
+# check equal variance
+leveneTest(bmi ~ smoking_status, data = ds1)
+```
+
+-   The p-value is **much greater than 0.05**, so we **fail to reject the null hypothesis** of equal variances.
+
+-   This indicates that **the variance of the numerical variable is similar across smoking status groups**, satisfying the homogeneity of variance assumption.
+
+-   However, since **normality is still violated** (Shapiro-Wilk p \< 0.05 for all groups), a **non-parametric test** like the Kruskal-Wallis test remains the appropriate choice for comparing groups.
+
+```{r}
+kruskal.test(bmi ~ smoking_status, data = ds1)
+```
+
+-   The p-value is **less than 0.05**, so we **reject the null hypothesis**.
+
+-   This indicates that **at least one smoking group has a significantly different BMI** compared to the others.
+
+-   The result suggests that **smoking status is associated with BMI** in this dataset.
+
+#### post-hoc analys
+
+```{r}
+dunn.test(ds1$bmi, ds1$smoking_status, method = "bonferroni")
+```
+
+-   **Formerly smoked** individuals have a significantly different BMI compared to **never smoked**.
+
+-   **Never smoked** individuals also differ significantly from **smokers**.
+
+-   No significant difference was observed between **formerly smoked and current smokers**.
+
+**Summary:**
+
+-   BMI is significantly associated with smoking status.
+
+-   Most differences involve the **never smoked group**, suggesting that BMI tends to vary more between non-smokers and other smoking categories.
+
+```{r}
+
+
+ggplot(ds1, aes(x = smoking_status, y = bmi, fill = smoking_status)) +
+  geom_boxplot() +
+  ggtitle("BMI by Smoking Status") +
+  xlab("Smoking Status") +
+  ylab("BMI") +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+```
+
+## Categorical Associations
+
+**Requirements for Chi-square test:**
+
+1.  **Both variables are categorical** – here, `smoking_status` has multiple categories (formerly smoked, never smoked, smokes, unknown) and `stroke` is binary (0,1).
+
+2.  **Expected frequencies** – ideally, all expected counts in the contingency table should be ≥5. If some are very low, the test may not be valid; in that case, use **Fisher’s Exact Test**.
+
+3.  **Independence of observations** – each observation should only appear once, and categories should not overlap.
+
+```{r}
+# Create contingency table
+tab <- table(ds1$smoking_status, ds1$stroke)
+
+# Chi-square test
+chisq.test(tab)
+
+```
+
+-   The p-value is **slightly below 0.05**, indicating a **statistically significant association** between smoking status and stroke at the 5% significance level.
+
+-   This suggests that the **probability of stroke varies across different smoking categories**.
+
+```{r}
+#library(rcompanion)
+cramerV(tab)
+
+chisq.test(tab)$residuals
+```
+
+-   To quantify the **strength of association** between `smoking_status` and `stroke`, we calculated:
+
+    -   **Cramér’s V:** 0.042
+
+        -   Values close to 0 indicate a **very weak association**.
+
+        -   Despite the Chi-squared test being significant (p ≈ 0.05), the overall effect size is small.
+
+    -   **Standardized residuals:**
+
+    | Smoking Status  | Stroke = 0 | Stroke = 1 |
+    |-----------------|------------|------------|
+    | Formerly smoked | -0.462     | 1.964      |
+    | Never smoked    | 0.318      | -1.349     |
+    | Smokes          | -0.011     | 0.045      |
+
+    **Interpretation:**
+
+    -   Residuals indicate **which cells contribute most** to the Chi-squared statistic.
+
+    -   The largest residual is for **formerly smoked & stroke = 1 (1.964)**, suggesting this cell has **more observed strokes than expected** under independence.
+
+    -   Other cells have smaller residuals, indicating minor deviations from expected counts.
+
+    **Summary:**
+
+    -   There is a **statistically significant but very weak association** between smoking status and stroke.
+
+    -   The primary contribution comes from individuals who **formerly smoked**, who show slightly higher observed stroke counts than expected.
+
+```{r}
+
+
+# Create a contingency table
+tab <- table(ds1$smoking_status, ds1$stroke)
+
+# Convert to data frame for ggplot
+df <- as.data.frame(tab)
+colnames(df) <- c("SmokingStatus", "Stroke", "Count")
+
+# Proportion bar plot
+ggplot(df, aes(x = SmokingStatus, y = Count, fill = factor(Stroke))) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_fill_manual(values = c("0" = "steelblue", "1" = "darkred"),
+                    labels = c("No Stroke", "Stroke")) +
+  ggtitle("Proportion of Stroke by Smoking Status") +
+  xlab("Smoking Status") +
+  ylab("Proportion of Patients") +
+  theme_minimal()
+
+```
+
+## Conclusions
+
+**Summary of Findings:**
+
+1- Demographics & Numerical Variables:
+
+Age: Most patients are middle-aged (40–60). Stroke probability increases with age, especially after 40. BMI: No strong correlation with age or glucose. BMI distribution has some extreme outliers. Average Glucose Level: Bimodal distribution; higher glucose is associated with stroke.
+
+2 - Correlations & Relationships:
+
+BMI and average glucose have a very weak positive monotonic relationship (Spearman ρ ≈ 0.11). Correlations between Age, BMI, and glucose are weak.
+
+3- Categorical Variables & Associations: Smoking Status: Statistically significant but very weak association with stroke (Cramér’s V ≈ 0.042). Former smokers slightly more likely to have stroke. Work Type & Residence Type: No significant effect on glucose or BMI. Hypertension: Significant predictor of stroke in logistic regression.
+
+4 - Statistical Tests: Mann–Whitney U test: Higher average glucose in stroke patients (p ≈ 1.6e-8). Kruskal-Wallis test: No significant difference in glucose across work types; BMI differs by smoking status. Chi-square test: Weak but significant association between smoking status and stroke.
+
+5 - PCA & Clustering: Most variance captured by PC1 (\~44%) and PC2 (\~31%), suggesting dimensionality reduction is feasible. Hierarchical clustering confirms that Age and Glucose are more closely related than BMI.
+
+6 - Logistic Regression: Significant predictors of stroke: Age, average glucose, and hypertension. BMI is not significant after adjusting for other variables. Visualizations show non-linear effect of age, linear effect of glucose, and step increase for hypertension.
+
+7 - Key Risk Factors for Stroke: Age (strongest effect) Average glucose level (moderate effect) Hypertension (strong categorical effect) Smoking status: weak effect, mainly in former smokers
