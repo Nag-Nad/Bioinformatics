@@ -14,7 +14,6 @@ Each subproject focuses on a different computational biology task — from molec
 | **Molecular_Similarity_Analysis_Python** | RDKit-based workflow for comparing molecular fingerprints and visualizing similarity via heatmaps and clustering. |
 | **PCR_Primer_Design_Python** | Calculates melting temperature and GC content of primers to assess their suitability. |
 | **Restriction_Enzyme_Python** | Simulates restriction enzyme digestion using regular expressions on DNA sequences. |
-| **SnakeMake_Pipeline_Automation_Python** | Example Snakemake workflow for automating bioinformatics pipelines. |
 | **bulk_RNA_seq_data_analysis_w_R** | Bulk RNA-seq data preprocessing, differential expression, and visualization in R. |
 | **Statistical_Analysis_w_R** | Exploratory data analysis of health risk factors and their association with disease outcomes in R. |
 
@@ -25,7 +24,7 @@ Each subproject focuses on a different computational biology task — from molec
 - **Sequence analysis** (restriction sites, primer design)  
 - **Molecular similarity and descriptor-based modeling**  
 - **Machine learning for biochemical property prediction**  
-- **Pipeline automation (Snakemake, CLI tools)**  
+- **Pipeline automation (CLI tools)**  
 - **Transcriptomics data processing (bulk RNA-seq)**  
 - **Health data exploration and visualization**
 
@@ -34,8 +33,7 @@ Each subproject focuses on a different computational biology task — from molec
 ## 🧰 Technologies  
 
 - **Python:** pandas, numpy, seaborn, matplotlib, RDKit, scipy, scikit-learn  
-- **R:** tidyverse, DESeq2, ggplot2  
-- **Snakemake** for workflow automation  
+- **R:** tidyverse, DESeq2, ggplot2    
 - **Regex** and **file I/O** for DNA sequence manipulation  
 
 ---
