@@ -5,11 +5,12 @@ import glob
 configfile:
     "config.yaml"
 
-PATH = "/home/naqme/md-pipeline/"
+PATH = "/md-pipeline/"
 SCRIPTS = PATH + "scripts"
 
 # Define parameters for .mdp (Molecular Dynamics Parameter) files from the config file
 # The .mdp files are stored in md-pipeline/gromacs-utils
+# config file format Yaml
 
 NVT_TIME = config["nvt_time"]
 NVT_DT = config["nvt_dt"]
