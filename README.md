@@ -15,6 +15,7 @@ Each subproject focuses on a different computational biology task — from molec
 | **PCR_Primer_Design_Python** | Calculates melting temperature and GC content of primers to assess their suitability. |
 | **Restriction_Enzyme_Python** | Simulates restriction enzyme digestion using regular expressions on DNA sequences. |
 | **bulk_RNA_seq_data_analysis_w_R** | Bulk RNA-seq data preprocessing, differential expression, and visualization in R. |
+| **single_cell_RNA_seq_analysis** | Analyse sc-RNA-seq data in Python with _scanpy_. |
 | **Statistical_Analysis_w_R** | Exploratory data analysis of health risk factors and their association with disease outcomes in R. |
 
 ---
