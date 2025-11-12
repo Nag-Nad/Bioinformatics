@@ -16,7 +16,8 @@ The preprocessing workflow relies on the following Python libraries:
 - [**Scanpy**](https://scanpy.readthedocs.io/) – main package for single-cell RNA-seq analysis  
 - [**NumPy**](https://numpy.org/) – numerical operations and array handling  
 - [**Pandas**](https://pandas.pydata.org/) – data manipulation and dataframe operations  
-- [**Matplotlib**](https://matplotlib.org/) – plotting and visualization  
+- [**Matplotlib**](https://matplotlib.org/) – plotting and visualization 
+- [**SciPy**] (https://docs.scipy.org/doc/scipy/reference/stats.html) - normality test (shapiro)
 
 ## Preprocessing Steps
 
@@ -43,6 +44,35 @@ The preprocessing workflow relies on the following Python libraries:
    - Checked global statistics to confirm dataset quality.
 
 
-- The preprocessed dataset is available as:
-  `output/scdr_preprocessed.h5ad`
+- The initial compressed dataset is available as:
+  `input/scdr_compresssed.h5ad`
+
+---
+
+## sc-RNA-seq data clustering and cell identification
+
+Single-cell RNA-seq allows the profiling of gene expression at the level of individual cells, revealing heterogeneity within cell populations. In this project, we focus on T-cells and aim to identify distinct subpopulations, such as Naive (TN), Central Memory (TCM), Effector Memory (TEM), and Effector Memory re-expressing CD45RA (TEMRA).
+
+
+## Workflow Overview
+
+The analysis follows these main steps:
+
+1. **Dimensionality reduction** – Principal Component Analysis (PCA) to summarize high-dimensional gene expression data.
+2. **Neighborhood graph construction** – Identify each cell’s closest neighbors based on PCA components.
+3. **Clustering** – Leiden algorithm is used to identify clusters of cells with similar expression profiles.
+4. **Visualization** – UMAP is used to visualize clusters in 2D space.
+5. **Marker gene identification** – Differentially expressed genes are identified for each cluster.
+6. **Cell type annotation** – Clusters are assigned cell type labels based on known marker genes.
+
+
+## Results
+
+Clusters correspond to known T-cell subtypes:
+_UMAP visualization shows clear separation between subtypes._
+
+- **TN (Naive T-cells)** – clusters 0, 3, 5
+- **TCM (Central Memory T-cells)** – clusters 1, 2
+- **TEM (Effector Memory T-cells)** – cluster 4
+- **TEMRA (Effector Memory re-expressing CD45RA)** – cluster 6
 
