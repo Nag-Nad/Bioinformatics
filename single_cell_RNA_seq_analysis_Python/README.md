@@ -69,6 +69,7 @@ The analysis follows these main steps:
 ## Results
 
 Clusters correspond to known T-cell subtypes:
+
 _UMAP visualization shows clear separation between subtypes._
 
 - **TN (Naive T-cells)** – clusters 0, 3, 5
