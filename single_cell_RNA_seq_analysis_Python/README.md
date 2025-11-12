@@ -17,7 +17,7 @@ The preprocessing workflow relies on the following Python libraries:
 - [**NumPy**](https://numpy.org/) – numerical operations and array handling  
 - [**Pandas**](https://pandas.pydata.org/) – data manipulation and dataframe operations  
 - [**Matplotlib**](https://matplotlib.org/) – plotting and visualization 
-- [**SciPy**] (https://docs.scipy.org/doc/scipy/reference/stats.html) - normality test (shapiro)
+- [**SciPy**](https://docs.scipy.org/doc/scipy/reference/stats.html) - normality test (shapiro)
 
 ## Preprocessing Steps
 
