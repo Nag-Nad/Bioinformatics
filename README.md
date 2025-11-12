@@ -15,7 +15,7 @@ Each subproject focuses on a different computational biology task — from molec
 | **PCR_Primer_Design_Python** | Calculates melting temperature and GC content of primers to assess their suitability. |
 | **Restriction_Enzyme_Python** | Simulates restriction enzyme digestion using regular expressions on DNA sequences. |
 | **bulk_RNA_seq_data_analysis_w_R** | Bulk RNA-seq data preprocessing, differential expression, and visualization in R. |
-| **single_cell_RNA_seq_analysis_Python** | Analyse sc-RNA-seq data (so far preprocessing, the following parts are coming up!) in Python with _scanpy_. |
+| **single_cell_RNA_seq_analysis_Python** | Analyse sc-RNA-seq data from T-cells in Python with _scanpy_. |
 | **Statistical_Analysis_w_R** | Exploratory data analysis of health risk factors and their association with disease outcomes in R. |
 
 ---
@@ -26,14 +26,14 @@ Each subproject focuses on a different computational biology task — from molec
 - **Molecular similarity and descriptor-based modeling**  
 - **Machine learning for biochemical property prediction**  
 - **Pipeline automation (CLI tools)**  
-- **Transcriptomics data processing (bulk RNA-seq)**  
-- **Health data exploration and visualization**
+- **Transcriptomics data processing (bulk RNA-seq, sc-RNA-seq)**  
+- **data exploration and visualization**
 
 ---
 
 ## 🧰 Technologies  
 
-- **Python:** pandas, numpy, seaborn, matplotlib, RDKit, scipy, scikit-learn  
+- **Python:** pandas, numpy, seaborn, matplotlib, RDKit, scipy, scikit-learn, scanpy, SciPy
 - **R:** tidyverse, DESeq2, ggplot2    
 - **Regex** and **file I/O** for DNA sequence manipulation  
 
