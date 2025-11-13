@@ -52,4 +52,4 @@ These descriptors relate to **Lipinski’s Rule of Five**, commonly used for ass
 
 ## Conclusion
 
-This project demonstrates that molecular descriptors _(MW, LogP, rotatable bonds, heavy atoms)_ can be reliably calculated from both local and online sources. The comparison confirms the consistency of these descriptors across RDKit, PubChemPy, and PubChem API methods.**
+This project demonstrates that molecular descriptors _(MW, LogP, rotatable bonds, heavy atoms)_ can be reliably calculated from both local and online sources. The comparison confirms the consistency of these descriptors across RDKit, PubChemPy, and PubChem API methods.
