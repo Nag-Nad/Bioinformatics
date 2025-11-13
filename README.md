@@ -17,6 +17,7 @@ Each subproject focuses on a different computational biology task — from molec
 | **bulk_RNA_seq_data_analysis_w_R** | Bulk RNA-seq data preprocessing, differential expression, and visualization in R. |
 | **single_cell_RNA_seq_analysis_Python** | Analyse sc-RNA-seq data from T-cells in Python with _scanpy_. |
 | **Statistical_Analysis_w_R** | Exploratory data analysis of health risk factors and their association with disease outcomes in R. |
+| **Molecular_Similarity_Analysis** | compares the chemical properties of ten randomly selected molecules using RDkit, PuchemPy and Pubchem API |
 
 ---
 
@@ -33,7 +34,7 @@ Each subproject focuses on a different computational biology task — from molec
 
 ## 🧰 Technologies  
 
-- **Python:** pandas, numpy, seaborn, matplotlib, RDKit, scipy, scikit-learn, scanpy, SciPy
+- **Python:** pandas, numpy, seaborn, matplotlib, RDKit, scipy, scikit-learn, scanpy, SciPy, bs4
 - **R:** tidyverse, DESeq2, ggplot2    
 - **Regex** and **file I/O** for DNA sequence manipulation  
 
@@ -48,7 +49,7 @@ It highlights practical problem-solving across molecular biology, cheminformatic
 
 ## 🧩 Example Applications  
 
-- Calculating **molecular similarity** between small compounds.  
+- Calculating **molecular similarity** between chemical compounds.  
 - Designing **PCR primers** with optimal GC content and melting temperature.  
 - Simulating **restriction enzyme digestion**.  
 - Automating **analysis pipelines** for reproducible research.  
